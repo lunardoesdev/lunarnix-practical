@@ -8,6 +8,11 @@ let
     hash = "sha256-XbkqdJL4sb75wrplM0ZDaot8xBMSZxWlCZPKBdl0ZbQ=";
   };
 
+  uruntime = pkgs.fetchurl {
+    url = "https://github.com/VHSgunzo/uruntime/releases/download/v0.8.1/uruntime-appimage-squashfs-lite-x86_64";
+    hash = "sha256-MsYCShT/N1dJ7jvtMzDBWGpt0r/t27186swFOuwrJ6M=";
+  };
+
   hostGraphicsPattern = lib.concatMapStringsSep "|" (name: "${name}*") [
     "libGL.so"
     "libEGL.so"
@@ -48,6 +53,7 @@ in
         gnugrep
         gnused
         patchelf
+        squashfsTools
       ];
 
       dontUnpack = true;
@@ -122,6 +128,18 @@ in
         EOF
 
         echo "bundled $(find "$out/lib" -maxdepth 1 -type f | wc -l) libraries"
+
+        # Make an AppImage from this AppDir: sharun remains the AppDir's
+        # launcher, and uruntime is the outer self-extracting AppImage runtime.
+        mksquashfs "$out" "$TMPDIR/${name}.squashfs" \
+          -root-owned -noappend -comp zstd -quiet
+        cp ${uruntime} "$TMPDIR/runtime"
+        chmod u+w "$TMPDIR/runtime"
+        sed -i 's/URUNTIME_EXTRACT=[0-9]/URUNTIME_EXTRACT=2/' "$TMPDIR/runtime"
+        grep -a -q 'URUNTIME_EXTRACT=2' "$TMPDIR/runtime"
+        cat "$TMPDIR/runtime" "$TMPDIR/${name}.squashfs" \
+          > "$out/${name}-x86_64.AppImage"
+        chmod +x "$out/${name}-x86_64.AppImage"
       '';
 
       doInstallCheck = checkCommand != "";
@@ -133,4 +151,5 @@ in
 
       meta.mainProgram = mainProgram;
     };
+
 }

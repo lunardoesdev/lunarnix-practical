@@ -36,9 +36,11 @@ ABIs. Android deliberately uses zlib rather than SDL3.
 ## FHS packaging
 
 `mkFhsPackage` accepts an ordinary derivation. `hostGraphics` defaults to true,
-so GL/Vulkan/DRM/Mesa remain host-provided. The bundle includes the loader and
-non-graphics `DT_NEEDED` closure, removes RPATH/RUNPATH, and creates sharun
-launchers (`AppRun`, `bin/*`) with the real binary under `shared/bin`.
+so GL/Vulkan/DRM/Mesa remain host-provided. The output contains the sharun FHS
+AppDir and an AppImage built by concatenating pinned uruntime with a SquashFS
+image of that AppDir. Sharun launches the real binary in `shared/bin`; uruntime
+provides the outer self-extracting AppImage runtime with extraction fallback
+when FUSE is unavailable.
 
 ## Verification
 

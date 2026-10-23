@@ -35,6 +35,8 @@ in
     test -x "$root/AppRun"
     test -x "$root/bin/sdl3-renderer"
     test -x "$root/shared/bin/sdl3-renderer"
+    test -x "$root/sdl3-renderer-x86_64.AppImage"
+    file "$root/sdl3-renderer-x86_64.AppImage" | grep -F 'ELF 64-bit'
     test -f "$root/lib/ld-linux-x86-64.so.2"
     test -f "$root/lib/libSDL3.so.0"
 
@@ -74,6 +76,12 @@ in
 
   fhs-hello-run = check "check-fhs-hello" ''
     output="$(${packages.fhs-hello}/bin/fhs-hello)"
+    echo "$output"
+    echo "$output" | grep -F 'hello from a portable FHS bundle'
+  '';
+
+  fhs-hello-appimage-run = check "check-fhs-hello-appimage" ''
+    output="$(${packages.fhs-hello}/fhs-hello-x86_64.AppImage)"
     echo "$output"
     echo "$output" | grep -F 'hello from a portable FHS bundle'
   '';
