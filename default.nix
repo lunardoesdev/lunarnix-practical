@@ -1,3 +1,3 @@
-{ pkgs ? import <nixpkgs> { } }:
+{ pkgs ? import <nixpkgs> { config.allowUnfree = true; } }:
 
-import ./packages.nix { inherit pkgs; }
+import ./lib { inherit pkgs; }

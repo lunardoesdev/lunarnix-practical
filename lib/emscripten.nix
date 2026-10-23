@@ -1,16 +1,22 @@
 { pkgs }:
 
 let
-  sdl3 = pkgs.stdenv.mkDerivation {
-    pname = "sdl3-wasm";
+  setupHook = pkgs.runCommand "emscripten-cmake-hook" { } ''
+    mkdir -p "$out/nix-support"
+    cat > "$out/nix-support/setup-hook" <<EOF
+    export HOME="\''${TMPDIR:-/tmp}"
+    export EM_CACHE="\''${TMPDIR:-/tmp}/emscripten-cache"
+    export CMAKE_TOOLCHAIN_FILE="${pkgs.emscripten}/share/emscripten/cmake/Modules/Platform/Emscripten.cmake"
+    EOF
+  '';
+
+  sdl3Wasm = pkgs.stdenv.mkDerivation {
+    pname = "sdl3-emscripten";
     version = pkgs.sdl3.version;
     src = pkgs.sdl3.src;
 
-    nativeBuildInputs = [
-      pkgs.cmake
-      pkgs.emscripten
-      pkgs.ninja
-    ];
+    nativeBuildInputs = [ pkgs.cmake pkgs.emscripten pkgs.ninja setupHook ];
+    propagatedBuildInputs = [ setupHook ];
 
     configurePhase = ''
       runHook preConfigure
@@ -43,26 +49,9 @@ let
     '';
 
     doCheck = false;
-
-    meta = {
-      description = "SDL3 built for Emscripten";
-    };
   };
-
-  mkDerivation = args:
-    pkgs.stdenv.mkDerivation (args // {
-      nativeBuildInputs = [
-        pkgs.emscripten
-        pkgs.nodejs
-        pkgs.pkg-config
-      ] ++ (args.nativeBuildInputs or [ ]);
-      doCheck = args.doCheck or false;
-    });
 in
 {
-  inherit sdl3 mkDerivation;
-  emscripten = pkgs.emscripten;
-  stdenv = pkgs.stdenv // {
-    inherit mkDerivation;
-  };
+  stdenv = pkgs.emscriptenStdenv;
+  sdl3 = sdl3Wasm;
 }

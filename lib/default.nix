@@ -1,14 +1,14 @@
-{ pkgs ? import <nixpkgs> { } }:
+{ pkgs }:
 
 let
-  targets = import ./targets.nix { inherit pkgs; };
-in
-{
-  inherit targets;
-  sdl3 = import ./sdl3.nix;
-  windows = import ./windows.nix { inherit pkgs targets; };
-  android = import ./android.nix { inherit pkgs targets; };
-  fhs = import ./fhs.nix { inherit pkgs; };
   emscripten = import ./emscripten.nix { inherit pkgs; };
   tcc = import ./tcc.nix { inherit pkgs; };
+  targets = import ./targets.nix { inherit pkgs; };
+  fhs = import ./fhs.nix { inherit pkgs; };
+in
+targets // {
+  emscriptenStdenv = emscripten.stdenv;
+  emscriptenSdl3 = emscripten.sdl3;
+  tccStdenv = tcc.tccStdenv;
+  inherit (fhs) mkFhsPackage;
 }

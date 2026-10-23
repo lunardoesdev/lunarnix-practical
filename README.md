@@ -1,166 +1,126 @@
 # lunarnix-practical
 
-Reusable Nix stdenvs and packaging helpers for Windows (mingwW64), FHS Linux,
-Emscripten, four Android ABIs (armv7a, aarch64, i686, x86_64), and a Linux
-tinycc stdenv.
+Target nixpkgs package sets for Windows, Android, plus native Linux; an FHS
+bundle function; and examples built with SDL3, zlib, Emscripten, and TinyCC.
 
-All examples use ordinary Nix derivation inputs (`buildInputs`/`nativeBuildInputs`,
-`pkg-config`), with no hardcoded `/nix/store` paths.
+## Import and use a target package set
 
-## Flake usage
-
-Add this repo to your flake inputs (replace the URL with your fork):
+Add lunarnix as a flake input:
 
 ```nix
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    lunarnix.url = "git+https://github.com/lunardoesdev/lunarnix-practical.git";
+    lunarnix.url = "github:lunardoesdev/lunarnix-practical";
   };
 
-  outputs = { self, nixpkgs, lunarnix }: { };
+  outputs = { self, nixpkgs, lunarnix }:
+    let
+      pkgs = nixpkgs.legacyPackages.x86_64-linux;
+    in {
+      packages.x86_64-linux.my-app =
+        lunarnix.x86_64-windows.callPackage ./my-app { };
+    };
 }
 ```
 
-Build the bundled examples:
+`lunarnix.x86_64-linux`, `lunarnix.x86_64-windows`, and
+`lunarnix.android-{armv7a,aarch64,i686,x86_64}` are nixpkgs package sets. Use
+their ordinary `callPackage` and dependencies; for example, a target package
+can take `{ stdenv, zlib, cmake }` and list `zlib` in `buildInputs`.
 
-```sh
-nix build .#sdl3-windows
-nix build .#sdl3-linux-fhs
-nix build .#sdl3-emscripten
-nix build .#sdl3-android-aarch64
-nix build .#tcc-deps
+The Android package sets use NDK 29 / API 35. Nixpkgs does not provide all four
+Android ABI aliases, so the missing sets are imported from the pinned nixpkgs
+source with explicit `crossSystem` values.
+
+## SDL3 demo
+
+[`examples/sdl3-renderer`](examples/sdl3-renderer) is a regular CMake package:
+
+```nix
+{ stdenv, sdl3, cmake, lib }:
+stdenv.mkDerivation {
+  pname = "sdl3-renderer";
+  version = "1.0.0";
+  src = ./.;
+  nativeBuildInputs = [ cmake ];
+  buildInputs = [ sdl3 ];
+  cmakeFlags = [ "-DSDL3_DIR=${lib.getDev sdl3}/lib/cmake/SDL3" ];
+}
 ```
 
-Run checks:
+Build it unchanged for Linux and Windows with the target package set's normal
+`callPackage`:
+
+```nix
+lunarnix.x86_64-linux.callPackage ./examples/sdl3-renderer { }
+lunarnix.x86_64-windows.callPackage ./examples/sdl3-renderer { }
+```
+
+CMake handles the executable and runtime-library install. Linux and Windows
+use their stock nixpkgs SDL3 packages.
+
+### Emscripten exception
+
+Nixpkgs has no `pkgsCross.emscripten` and no Emscripten SDL3 package. Importing
+nixpkgs with its stdenv replaced fails during nixpkgs' bootstrap-stage checks,
+so Emscripten is exposed as `emscriptenStdenv` plus `emscriptenSdl3`, not falsely
+presented as a full package set. The SDL3 library is built from nixpkgs' SDL3
+source using Emscripten's supported CMake toolchain.
+
+The example uses the same CMake project:
+
+```nix
+import ./examples/sdl3-renderer {
+  stdenv = lunarnix.emscriptenStdenv;
+  sdl3 = lunarnix.emscriptenSdl3;
+  cmake = pkgs.cmake;
+  lib = pkgs.lib;
+}
+```
+
+## Android zlib demo
+
+Android uses a non-SDL CMake program in [`examples/zlib-probe`](examples/zlib-probe).
+It is built with each package set's stock `zlib`:
+
+```nix
+lunarnix.android-aarch64.callPackage ./examples/zlib-probe { }
+```
+
+## FHS bundle demo
+
+[`examples/fhs-hello`](examples/fhs-hello) first defines an ordinary native
+derivation, then passes it to the one `mkFhsPackage` function:
+
+```nix
+lunarnix.mkFhsPackage {
+  drv = myApp;
+  name = "my-app";
+  # hostGraphics defaults to true; GL/Vulkan/DRM/Mesa stay host-provided.
+}
+```
+
+Build and run the demo:
 
 ```sh
+nix build .#fhs-hello
+./result/bin/fhs-hello
+```
+
+## TinyCC
+
+`tccStdenv` is a native custom stdenv for C-only packages. The `tcc-deps`
+example uses regular native zlib and libpng inputs.
+
+## Build and verify
+
+```sh
+nix build .#sdl3-linux-native
+nix build .#sdl3-linux-fhs
+nix build .#sdl3-windows
+nix build .#sdl3-emscripten
+nix build .#android-zlib-aarch64
+nix build .#tcc-deps
 nix flake check
 ```
-
-## Using the libraries
-
-### One SDL3 app, many stdenvs
-
-`lib/sdl3-app.nix` builds a single app derivation that works with different stdenvs:
-
-```nix
-{ pkgs, lunarnix }:
-let
-  targets = lunarnix.lib.targets { inherit pkgs; }; # or import
-  windows = lunarnix.lib.windows { inherit pkgs targets; };
-  android = lunarnix.lib.android { inherit pkgs targets; };
-  mkSdl3App = pkgs.callPackage "${lunarnix}/lib/sdl3-app.nix" { src = ./src; };
-  sdl3Native = pkgs.callPackage "${lunarnix}/lib/sdl3.nix" { targetPkgs = pkgs; fhs = true; };
-in {
-  app-native = mkSdl3App { stdenv = pkgs.stdenv; sdl3 = sdl3Native; nativeBuildInputs = [ pkgs.pkg-config ]; };
-  app-windows = mkSdl3App { stdenv = windows.stdenv; sdl3 = windows.sdl3; nativeBuildInputs = [ pkgs.pkg-config ]; };
-  app-android-aarch64 = mkSdl3App { stdenv = android.aarch64.stdenv; sdl3 = android.aarch64.sdl3; nativeBuildInputs = [ pkgs.pkg-config ]; };
-}
-```
-
-Or just build directly:
-
-```nix
-let
-  lunarnix = builtins.getFlake "git+https://github.com/lunardoesdev/lunarnix-practical.git";
-  pkgs = import <nixpkgs> { };
-  targets = lunarnix.lib.targets { inherit pkgs; };
-  windows = lunarnix.lib.windows { inherit pkgs targets; };
-  mkApp = pkgs.callPackage "${lunarnix}/lib/sdl3-app.nix" { src = ./app; };
-  sdl3Win = pkgs.callPackage "${lunarnix}/lib/sdl3.nix" { targetPkgs = targets.windows; windows = true; };
-in
-mkApp { stdenv = windows.stdenv; sdl3 = sdl3Win; nativeBuildInputs = [ pkgs.pkg-config ]; }
-```
-
-### FHS portable bundle (single function)
-
-Wrap any derivation in an FHS bundle with host graphics support:
-
-```nix
-{ pkgs, lunarnix }:
-let
-  fhs = lunarnix.lib.fhs { inherit pkgs; };
-  myApp = pkgs.stdenv.mkDerivation { /* ... */ };
-in
-fhs.mkFhsPackage {
-  drv = myApp;
-  name = "my-app";        # optional
-  mainProgram = "my-app"; # optional if drv.meta.mainProgram is set
-  hostGraphics = true;    # default: true (keep GL/Vulkan/DRM/Mesa on host)
-}
-```
-
-The bundle produces sharun-based launchers (`AppRun`, `bin/*`) and places the real
-binary in `shared/bin/`. Host graphics libraries are not bundled.
-
-### Emscripten
-
-Build your own SDL3 app for wasm:
-
-```nix
-{ pkgs, lunarnix }:
-let
-  emscripten = lunarnix.lib.emscripten { inherit pkgs; };
-  app = import "${lunarnix}/lib/emscripten-app.nix" {
-    inherit pkgs;
-    sdl3Wasm = emscripten.sdl3;
-    src = ./app;
-  };
-in app
-```
-
-Or use `emscriptenStdenv` via the app helper pattern as needed.
-
-### Android (all four ABIs)
-
-```nix
-{ pkgs, lunarnix }:
-let
-  targets = lunarnix.lib.targets { inherit pkgs; };
-  android = lunarnix.lib.android { inherit pkgs targets; };
-  mkApp = pkgs.callPackage "${lunarnix}/lib/sdl3-app.nix" { src = ./app; };
-in {
-  armv7a  = mkApp { stdenv = android.armv7a.stdenv; sdl3 = android.armv7a.sdl3; nativeBuildInputs = [ pkgs.pkg-config ]; };
-  aarch64 = mkApp { stdenv = android.aarch64.stdenv; sdl3 = android.aarch64.sdl3; nativeBuildInputs = [ pkgs.pkg-config ]; };
-  i686    = mkApp { stdenv = android.i686.stdenv; sdl3 = android.i686.sdl3; nativeBuildInputs = [ pkgs.pkg-config ]; };
-  x86_64  = mkApp { stdenv = android.x86_64.stdenv; sdl3 = android.x86_64.sdl3; nativeBuildInputs = [ pkgs.pkg-config ]; };
-}
-```
-
-Android uses NDK 29 / API 35 with `useAndroidPrebuilt = true`. The provided `lib/sdl3.nix`
-handles the required overrides for Android.
-
-### TCC stdenv (Linux only)
-
-For C-only code that should build with TinyCC:
-
-```nix
-{ pkgs, lunarnix }:
-let
-  tcc = lunarnix.lib.tcc { inherit pkgs; };
-in
-tcc.mkDerivation {
-  pname = "my-tcc-app";
-  version = "1.0.0";
-  src = ./app;
-  nativeBuildInputs = [ pkgs.pkg-config pkgs.patchelf ];
-  buildInputs = [ pkgs.zlib pkgs.libpng ]; # example deps
-  hardeningDisable = [ "all" ];
-  dontConfigure = true;
-  buildPhase = ''
-    $CC $(pkg-config --cflags zlib libpng) main.c -o my-tcc-app $(pkg-config --libs zlib libpng)
-  '';
-  installPhase = ''
-    install -Dm755 my-tcc-app "$out/bin/my-tcc-app"
-  '';
-  postFixup = ''
-    patchelf --set-rpath "${pkgs.lib.makeLibraryPath [ pkgs.zlib pkgs.libpng ]}" "$out/bin/my-tcc-app"
-  '';
-}
-```
-
-## Notes
-- FHS bundles rely on the host graphics stack by default; do not bundle Mesa/GL/Vulkan.
-- Windows DLLs may be symlinked by mingw stdenv fixup; dereference them if you need relocatable outputs.
-- Emscripten uses a plain stdenv + `emcc` to avoid the stricter `buildEmscriptenPackage` check phase.

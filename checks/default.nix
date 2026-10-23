@@ -15,12 +15,11 @@ let
   '';
 
   androidCheck = name: expected:
-    check "check-sdl3-android-${name}" ''
-      binary="${packages."sdl3-android-${name}"}/bin/sdl3-renderer"
+    check "check-android-zlib-${name}" ''
+      binary="${packages."android-zlib-${name}"}/bin/zlib-probe"
       file "$binary" | grep -F '${expected}'
       file "$binary" | grep -F 'for Android 35'
       readelf -h "$binary" | grep -F 'DYN'
-      readelf -d "$binary" | grep -F 'libSDL3.so'
     '';
 in
 {
@@ -61,21 +60,21 @@ in
     grep -q 'createSDL3' "$root/sdl3-renderer.js" || grep -q 'SDL3' "$root/sdl3-renderer.js"
   '';
 
-  sdl3-android-armv7a-artifacts = androidCheck "armv7a" "ARM,";
-  sdl3-android-aarch64-artifacts = androidCheck "aarch64" "ARM aarch64";
-  sdl3-android-i686-artifacts = check "check-sdl3-android-i686" ''
-    binary="${packages."sdl3-android-i686"}/bin/sdl3-renderer"
-    file "$binary" | grep -E 'Intel|i386'
-    file "$binary" | grep -F 'for Android 35'
-    readelf -h "$binary" | grep -F 'DYN'
-    readelf -d "$binary" | grep -F 'libSDL3.so'
-  '';
-  sdl3-android-x86_64-artifacts = androidCheck "x86_64" "x86-64";
+  android-zlib-armv7a-artifacts = androidCheck "armv7a" "ARM,";
+  android-zlib-aarch64-artifacts = androidCheck "aarch64" "ARM aarch64";
+  android-zlib-i686-artifacts = androidCheck "i686" "Intel i386";
+  android-zlib-x86_64-artifacts = androidCheck "x86_64" "x86-64";
 
   tcc-deps-run = check "check-tcc-deps" ''
     output="$(${packages.tcc-deps}/bin/tcc-deps)"
     echo "$output"
     echo "$output" | grep -F 'zlib='
     echo "$output" | grep -F 'libpng='
+  '';
+
+  fhs-hello-run = check "check-fhs-hello" ''
+    output="$(${packages.fhs-hello}/bin/fhs-hello)"
+    echo "$output"
+    echo "$output" | grep -F 'hello from a portable FHS bundle'
   '';
 }
