@@ -101,17 +101,17 @@ lunarnix.mkFhsPackage {
 }
 ```
 
-The output contains the sharun-based FHS AppDir and `my-app-x86_64.AppImage`.
-Sharun is the AppDir launcher; pinned uruntime is combined with a SquashFS
-image of that AppDir to create the self-extracting AppImage. Its policy tries
-FUSE and falls back to extraction, so FUSE is not required.
+The derivation output contains exactly one executable: `$out/bin/my-app`, a
+single-file AppImage with no extension. During the build, the FHS AppDir is
+staged and packed into SquashFS. Sharun is its inner launcher; pinned uruntime
+is prepended as the outer AppImage runtime. Its policy tries FUSE and falls
+back to extraction, so FUSE is not required.
 
 Build and run the demo:
 
 ```sh
 nix build .#fhs-hello
 ./result/bin/fhs-hello
-./result/fhs-hello-x86_64.AppImage
 ```
 
 ## TinyCC

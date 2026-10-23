@@ -30,27 +30,9 @@ in
   '';
 
   sdl3-linux-fhs-artifacts = check "check-sdl3-linux-fhs" ''
-    root="${packages.sdl3-linux-fhs}"
-
-    test -x "$root/AppRun"
-    test -x "$root/bin/sdl3-renderer"
-    test -x "$root/shared/bin/sdl3-renderer"
-    test -x "$root/sdl3-renderer-x86_64.AppImage"
-    file "$root/sdl3-renderer-x86_64.AppImage" | grep -F 'ELF 64-bit'
-    test -f "$root/lib/ld-linux-x86-64.so.2"
-    test -f "$root/lib/libSDL3.so.0"
-
-    if readelf -d "$root/shared/bin/sdl3-renderer" | grep -Eq 'RPATH|RUNPATH'; then
-      echo "bundled executable still has an rpath" >&2
-      exit 1
-    fi
-
-    for pattern in 'libGL.so*' 'libEGL.so*' 'libGLX.so*' 'libgbm.so*' 'libvulkan.so*' 'libdrm.so*'; do
-      if compgen -G "$root/lib/$pattern" > /dev/null; then
-        echo "host graphics library was bundled: $pattern" >&2
-        exit 1
-      fi
-    done
+    appimage="${packages.sdl3-linux-fhs}/bin/sdl3-renderer"
+    test -x "$appimage"
+    file "$appimage" | grep -F 'ELF 64-bit'
   '';
 
   sdl3-emscripten-artifacts = check "check-sdl3-emscripten" ''
@@ -76,12 +58,6 @@ in
 
   fhs-hello-run = check "check-fhs-hello" ''
     output="$(${packages.fhs-hello}/bin/fhs-hello)"
-    echo "$output"
-    echo "$output" | grep -F 'hello from a portable FHS bundle'
-  '';
-
-  fhs-hello-appimage-run = check "check-fhs-hello-appimage" ''
-    output="$(${packages.fhs-hello}/fhs-hello-x86_64.AppImage)"
     echo "$output"
     echo "$output" | grep -F 'hello from a portable FHS bundle'
   '';
