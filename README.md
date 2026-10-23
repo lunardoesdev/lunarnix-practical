@@ -15,7 +15,7 @@ Add this repo to your flake inputs (replace the URL with your fork):
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    lunarnix.url = "git+https://example.com/lunarnix-practical.git";
+    lunarnix.url = "git+https://github.com/lunardoesdev/lunarnix-practical.git";
   };
 
   outputs = { self, nixpkgs, lunarnix }: { };
@@ -63,7 +63,7 @@ Or just build directly:
 
 ```nix
 let
-  lunarnix = builtins.getFlake "git+https://example.com/lunarnix-practical.git";
+  lunarnix = builtins.getFlake "git+https://github.com/lunardoesdev/lunarnix-practical.git";
   pkgs = import <nixpkgs> { };
   targets = lunarnix.lib.targets { inherit pkgs; };
   windows = lunarnix.lib.windows { inherit pkgs targets; };
