@@ -12,10 +12,6 @@ rustPlatform.buildRustPackage {
   buildInputs = [ zlib ];
   nativeBuildInputs = [ buildPackages.pkg-config ];
 
-  # The Rust wasm target uses rust-lld flags (-flavor wasm); point cargo at
-  # lld instead of the Emscripten cc driver.
-  RUSTFLAGS = "-C linker=${buildPackages.lld}/bin/ld.lld";
-
   doCheck = false;
 
   installPhase = ''

@@ -51,7 +51,8 @@ so `rustPlatform.buildRustPackage` needs no manual target flags.
 `examples/rust-sys-app` demonstrates the `-sys` crate mechanism: its local
 `zlib-sys` crate runs `pkg-config --libs zlib` in `build.rs`, and the zlib
 `.pc` file comes from the package's ordinary `buildInputs = [ zlib ]`.
-`buildPackages.pkg-config` is the native tool that reads it.
+`buildPackages.pkg-config` is the native tool that reads it. The shared
+`rustPlatform` also selects the wasm linker, so packages need no `RUSTFLAGS`.
 
 Dependencies are used the standard way:
 

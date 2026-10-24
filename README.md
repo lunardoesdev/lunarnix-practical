@@ -122,7 +122,9 @@ nativeBuildInputs = [ buildPackages.pkg-config ];
 
 `pkg-config` finds zlib's `.pc` file from the current `buildInputs`, and
 `zlib-sys` emits the corresponding `cargo:rustc-link-search` /
-`cargo:rustc-link-lib` directives. No `-I` or `-L` is written by hand.
+`cargo:rustc-link-lib` directives. No `-I` or `-L` is written by hand. The
+shared `rustPlatform` also selects the wasm linker, so the package needs no
+`RUSTFLAGS` either.
 
 ```sh
 nix build .#rust-sys-app

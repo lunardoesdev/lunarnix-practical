@@ -237,20 +237,29 @@ let
             );
         };
 
-      packageOverrides = super: {
-        shared = false;
+      packageOverrides = super:
+        let
+          rustPlatform = nativePkgs.makeRustPlatform {
+            stdenv = super.stdenv;
+            rustc = nativePkgs.rustc;
+            cargo = nativePkgs.cargo;
+          };
+        in
+        {
+          shared = false;
 
-        # Build tools must run on the host.
-        buildPackages = nativePkgs;
+          # Build tools must run on the host.
+          buildPackages = nativePkgs;
 
-        # rustPlatform with native cargo/rustc but hooks and target
-        # information for the Emscripten stdenv.
-        rustPlatform = nativePkgs.makeRustPlatform {
-          stdenv = super.stdenv;
-          rustc = nativePkgs.rustc;
-          cargo = nativePkgs.cargo;
+          # Rust's wasm32 target uses rust-lld flags. Keep the linker choice in
+          # the shared rustPlatform instead of each Rust package.
+          rustPlatform = rustPlatform // {
+            buildRustPackage = args:
+              rustPlatform.buildRustPackage (args // {
+                RUSTFLAGS = "-C linker=${nativePkgs.lld}/bin/ld.lld";
+              });
+          };
         };
-      };
     };
   };
 in
