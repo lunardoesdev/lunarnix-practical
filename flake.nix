@@ -6,10 +6,7 @@
   outputs = { self, nixpkgs }:
     let
       system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        inherit system;
-        config.allowUnsupportedSystem = true;
-      };
+      pkgs = nixpkgs.legacyPackages.${system};
 
       lunarnix = import ./lib { inherit pkgs; };
       packages = import ./packages.nix { inherit pkgs lunarnix; };
@@ -17,7 +14,6 @@
     {
       # The whole public API: wrap any Linux derivation as an FHS AppImage.
       inherit (lunarnix) mkFhsPackage;
-      inherit (lunarnix) emscripten;
       lib = lunarnix;
 
       packages.${system} = packages // {

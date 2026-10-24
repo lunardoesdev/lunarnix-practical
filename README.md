@@ -64,37 +64,6 @@ At runtime sharun invokes the bundled loader with the bundled libraries, then
 falls back to host library paths for the GPU driver stack. The result is a
 single self-contained executable.
 
-## Emscripten target
-
-Emscripten is set up as a real nixpkgs `crossSystem`:
-
-```nix
-crossSystem = { config = "wasm32-unknown-none"; };
-```
-
-The base cross stdenv is replaced through the official
-`config.replaceCrossStdenv` hook with one whose `cc` is an `emcc`-based package
-(`emcc`, `em++`, `emar`, `emranlib` and a setup hook exporting `CC`, `AR`,
-`RANLIB`, `CMAKE_TOOLCHAIN_FILE`). Native build tools stay in `buildPackages`.
-
-`sdl3` appears nowhere in the library: the demo application simply declares
-
-```nix
-buildInputs = [ sdl3 ];
-```
-
-and the cross package set's own `callPackage` resolves the unmodified nixpkgs
-SDL3 built with the Emscripten stdenv.
-
-Build the demo:
-
-```sh
-nix build .#sdl3-emscripten
-```
-
-It produces `sdl3-renderer.html`, `.js`, and `.wasm` under
-`share/sdl3-renderer`; serve that directory over HTTP to run it in a browser.
-
 ## Demos
 
 ```sh
@@ -114,5 +83,4 @@ uses stock nixpkgs SDL3 and requires a working host GL driver.
 nix flake check
 ```
 
-The checks run the FHS hello AppImage, verify the SDL3 FHS artifact, and check
-the Emscripten `.wasm` output.
+The checks run the FHS hello AppImage and verify the SDL3 FHS artifact.
