@@ -196,6 +196,12 @@ let
                 execFormat = { name = "wasm"; };
               };
             };
+            rust = (baseStdenv.hostPlatform.rust or { }) // {
+              rustcTarget = "wasm32-unknown-unknown";
+              rustcTargetSpec = "wasm32-unknown-unknown";
+              cargoEnvVarTarget = "wasm32_unknown_unknown";
+              cargoShortTarget = "wasm32-unknown-unknown";
+            };
           };
 
           targetStdenv = baseStdenv.override (old: {
@@ -231,8 +237,16 @@ let
             );
         };
 
-      packageOverrides = _: {
+      packageOverrides = super: {
         shared = false;
+
+        # rustPlatform with native cargo/rustc but hooks and target
+        # information for the Emscripten stdenv.
+        rustPlatform = nativePkgs.makeRustPlatform {
+          stdenv = super.stdenv;
+          rustc = nativePkgs.rustc;
+          cargo = nativePkgs.cargo;
+        };
       };
     };
   };

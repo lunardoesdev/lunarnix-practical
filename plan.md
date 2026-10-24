@@ -43,6 +43,11 @@ An additional setup hook exports the Emscripten-specific environment:
 file, Cargo target/linker/`cc`-crate variables, `PKG_CONFIG_ALLOW_CROSS`, and
 parallelism (`EMCC_CORES`, `MAKEFLAGS`, ...).
 
+The package set also exposes a `rustPlatform` made with
+`makeRustPlatform { stdenv = <Emscripten>; rustc = <native>; cargo = <native>; }`.
+It selects `wasm32-unknown-unknown` through the stdenv's Rust target metadata,
+so `rustPlatform.buildRustPackage` needs no manual target flags.
+
 Dependencies are used the standard way:
 
 ```nix

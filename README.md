@@ -100,6 +100,15 @@ triplets, `CMAKE_*`, a Meson cross file, Cargo target/linker variables,
 `PKG_CONFIG_ALLOW_CROSS`, and parallelism variables (`EMCC_CORES`,
 `MAKEFLAGS`, ...).
 
+### Rust with C dependencies
+
+`examples/rust-emscripten-lib` is built with the set's `rustPlatform`
+(`rustPlatform.buildRustPackage`) and no manual `cargoBuildFlags`: the
+Emscripten stdenv's Rust target information selects `wasm32-unknown-unknown`,
+while `makeRustPlatform` keeps `cargo`/`rustc` native. The Rust `main` calls
+zlib from nixpkgs. `examples/rust-emscripten-app` links the resulting staticlib
+with `emcc` using ordinary `buildInputs = [ rustLib zlib ]`.
+
 ## Demos
 
 ```sh
@@ -110,6 +119,8 @@ nix build .#sdl3-fhs
 ./result/bin/sdl3-renderer --renderer opengl --seconds 1
 
 nix build .#emscripten-hello
+
+nix build .#rust-emscripten
 ```
 
 The SDL3 demo is a normal native CMake package wrapped by `mkFhsPackage`; it
@@ -117,6 +128,9 @@ uses stock nixpkgs SDL3 and requires a working host GL driver.
 
 `emscripten-hello` is a standard derivation with `buildInputs = [ zlib ]`; it
 produces `emscripten-hello.html`, `.js`, and `.wasm`.
+
+`rust-emscripten` is a Rust program with a zlib dependency; it produces
+`rust-emscripten.html`, `.js`, and `.wasm`.
 
 ## Checks
 

@@ -32,4 +32,12 @@ in
     test -f "$root/emscripten-hello.wasm"
     file "$root/emscripten-hello.wasm" | grep -F 'WebAssembly'
   '';
+
+  rust-emscripten-artifacts = check "check-rust-emscripten" ''
+    root="${packages.rust-emscripten}/share/rust-emscripten"
+    test -f "$root/rust-emscripten.html"
+    test -f "$root/rust-emscripten.js"
+    test -f "$root/rust-emscripten.wasm"
+    file "$root/rust-emscripten.wasm" | grep -F 'WebAssembly'
+  '';
 }
