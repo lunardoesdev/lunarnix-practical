@@ -109,6 +109,28 @@ while `makeRustPlatform` keeps `cargo`/`rustc` native. The Rust `main` calls
 zlib from nixpkgs. `examples/rust-emscripten-app` links the resulting staticlib
 with `emcc` using ordinary `buildInputs = [ rustLib zlib ]`.
 
+### Rust `-sys` crate demo
+
+[`examples/rust-sys-app`](examples/rust-sys-app) contains a local `zlib-sys`
+crate whose `build.rs` asks `pkg-config` for the installed zlib. The package
+declares only:
+
+```nix
+buildInputs = [ zlib ];
+nativeBuildInputs = [ buildPackages.pkg-config ];
+```
+
+`pkg-config` finds zlib's `.pc` file from the current `buildInputs`, and
+`zlib-sys` emits the corresponding `cargo:rustc-link-search` /
+`cargo:rustc-link-lib` directives. No `-I` or `-L` is written by hand.
+
+```sh
+nix build .#rust-sys-app
+```
+
+The resulting `rust-sys-app.wasm` exports `main`, which returns the zlib CRC32
+of a test string.
+
 ## Demos
 
 ```sh
@@ -121,6 +143,8 @@ nix build .#sdl3-fhs
 nix build .#emscripten-hello
 
 nix build .#rust-emscripten
+
+nix build .#rust-sys-app
 ```
 
 The SDL3 demo is a normal native CMake package wrapped by `mkFhsPackage`; it
@@ -131,6 +155,9 @@ produces `emscripten-hello.html`, `.js`, and `.wasm`.
 
 `rust-emscripten` is a Rust program with a zlib dependency; it produces
 `rust-emscripten.html`, `.js`, and `.wasm`.
+
+`rust-sys-app` demonstrates a Rust `-sys` crate finding zlib through
+`pkg-config` and the current `buildInputs`; it produces `rust-sys-app.wasm`.
 
 ## Checks
 

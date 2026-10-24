@@ -1,0 +1,10 @@
+[package]
+name = "rust-sys-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+zlib-sys = { path = "zlib-sys" }
+
+[profile.release]
+panic = "abort"

@@ -20,4 +20,6 @@ in
   rust-emscripten = lunarnix.emscripten.callPackage ./examples/rust-emscripten-app {
     rustLib = rustEmscriptenLib;
   };
+
+  rust-sys-app = lunarnix.emscripten.callPackage ./examples/rust-sys-app { };
 }

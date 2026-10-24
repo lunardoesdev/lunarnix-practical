@@ -40,4 +40,10 @@ in
     test -f "$root/rust-emscripten.wasm"
     file "$root/rust-emscripten.wasm" | grep -F 'WebAssembly'
   '';
+
+  rust-sys-app-artifacts = check "check-rust-sys-app" ''
+    wasm="${packages.rust-sys-app}/share/rust-sys-app/rust-sys-app.wasm"
+    test -f "$wasm"
+    file "$wasm" | grep -F 'WebAssembly'
+  '';
 }

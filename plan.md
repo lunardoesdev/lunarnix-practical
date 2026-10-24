@@ -48,6 +48,11 @@ The package set also exposes a `rustPlatform` made with
 It selects `wasm32-unknown-unknown` through the stdenv's Rust target metadata,
 so `rustPlatform.buildRustPackage` needs no manual target flags.
 
+`examples/rust-sys-app` demonstrates the `-sys` crate mechanism: its local
+`zlib-sys` crate runs `pkg-config --libs zlib` in `build.rs`, and the zlib
+`.pc` file comes from the package's ordinary `buildInputs = [ zlib ]`.
+`buildPackages.pkg-config` is the native tool that reads it.
+
 Dependencies are used the standard way:
 
 ```nix

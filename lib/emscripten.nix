@@ -240,6 +240,9 @@ let
       packageOverrides = super: {
         shared = false;
 
+        # Build tools must run on the host.
+        buildPackages = nativePkgs;
+
         # rustPlatform with native cargo/rustc but hooks and target
         # information for the Emscripten stdenv.
         rustPlatform = nativePkgs.makeRustPlatform {
