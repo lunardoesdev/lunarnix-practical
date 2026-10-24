@@ -49,35 +49,25 @@ stdenv.mkDerivation {
 }
 ```
 
-Build it unchanged for Linux and Windows with the target package set's normal
-`callPackage`:
+Build it unchanged with each target package set's normal `callPackage`:
 
 ```nix
 lunarnix.x86_64-linux.callPackage ./examples/sdl3-renderer { }
 lunarnix.x86_64-windows.callPackage ./examples/sdl3-renderer { }
+lunarnix.emscripten.callPackage ./examples/sdl3-renderer { }
 ```
 
 CMake handles the executable and runtime-library install. Linux and Windows
 use their stock nixpkgs SDL3 packages.
 
-### Emscripten exception
+### Emscripten
 
-Nixpkgs has no `pkgsCross.emscripten` and no Emscripten SDL3 package. Importing
-nixpkgs with its stdenv replaced fails during nixpkgs' bootstrap-stage checks,
-so Emscripten is exposed as `emscriptenStdenv` plus `emscriptenSdl3`, not falsely
-presented as a full package set. The SDL3 library is built from nixpkgs' SDL3
-source using Emscripten's supported CMake toolchain.
-
-The example uses the same CMake project:
-
-```nix
-import ./examples/sdl3-renderer {
-  stdenv = lunarnix.emscriptenStdenv;
-  sdl3 = lunarnix.emscriptenSdl3;
-  cmake = pkgs.cmake;
-  lib = pkgs.lib;
-}
-```
+Nixpkgs has no `pkgsCross.emscripten` and no Emscripten SDL3 package. This repo
+builds the package set with `config.packageOverrides`, which is nixpkgs's
+supported hook for replacing `stdenv` after bootstrapping. The set uses
+`pkgs.emscriptenStdenv` and a dedicated SDL3 built from nixpkgs' SDL3 source
+with Emscripten's CMake toolchain. The app uses the same `callPackage` call as
+every other target.
 
 ## Android zlib demo
 

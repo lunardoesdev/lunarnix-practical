@@ -22,7 +22,8 @@
       android-aarch64 = lunarnix.android-aarch64;
       android-i686 = lunarnix.android-i686;
       android-x86_64 = lunarnix.android-x86_64;
-      inherit (lunarnix) emscriptenStdenv emscriptenSdl3 tccStdenv;
+      emscripten = lunarnix.emscripten;
+      tccStdenv = lunarnix.tccStdenv;
 
       inherit (lunarnix) mkFhsPackage;
       lib = lunarnix;

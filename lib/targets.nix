@@ -1,4 +1,4 @@
-{ pkgs }:
+{ pkgs, emscriptenPkgs }:
 
 {
   x86_64-linux = pkgs;
@@ -47,5 +47,7 @@
     };
     config.allowUnfree = true;
   };
+
+  emscripten = emscriptenPkgs;
 
 }

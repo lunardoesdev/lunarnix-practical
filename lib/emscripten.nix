@@ -50,8 +50,17 @@ let
 
     doCheck = false;
   };
+
+  emscriptenPkgs = import pkgs.path {
+    localSystem = pkgs.stdenv.hostPlatform.system;
+    config = {
+      allowUnfree = true;
+      packageOverrides = _: {
+        stdenv = pkgs.emscriptenStdenv;
+        sdl3 = sdl3Wasm;
+        cmake = pkgs.cmake;
+      };
+    };
+  };
 in
-{
-  stdenv = pkgs.emscriptenStdenv;
-  sdl3 = sdl3Wasm;
-}
+emscriptenPkgs

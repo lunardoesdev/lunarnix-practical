@@ -9,16 +9,16 @@ function and a TinyCC stdenv.
 | --- | --- | --- |
 | `x86_64-linux` | Native nixpkgs package set | SDL3 renderer |
 | `x86_64-windows` | `pkgsCross.mingwW64` | SDL3 renderer |
-| `emscripten` | `emscriptenStdenv` and SDL3 built from nixpkgs SDL source | SDL3 renderer |
+| `emscripten` | full package set with `emscriptenStdenv` via `packageOverrides` | SDL3 renderer |
 | Android armv7a/aarch64/i686/x86_64 | NDK 29 / API 35 package sets | zlib probe |
 | FHS Linux | `mkFhsPackage` wraps ordinary derivations | SDL3 renderer and hello demo |
 | Linux/TinyCC | custom TinyCC stdenv | zlib + libpng probe |
 
 Nixpkgs does not define an Emscripten cross system or provide an SDL3 Emscripten
-package. Replacing `stdenv` in a full nixpkgs import fails nixpkgs bootstrap
-assertions, so this repo exposes the supported native/cross package sets and
-uses the official `emscriptenStdenv` directly for that one target. Its SDL3 is
-built from nixpkgs' SDL3 source with Emscripten's CMake toolchain.
+package. This repo creates an Emscripten package set using
+`config.packageOverrides` with `pkgs.emscriptenStdenv`, so `callPackage` resolves
+the Emscripten stdenv and SDL3 normally. Its SDL3 is built from nixpkgs' SDL3
+source with Emscripten's CMake toolchain.
 
 The Android package sets use explicit `crossSystem` settings because the
 nixpkgs prebuilt aliases use a different NDK version and do not cover all four

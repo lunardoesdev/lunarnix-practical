@@ -3,12 +3,7 @@
 {
   sdl3-linux-native = lunarnix.x86_64-linux.callPackage ./examples/sdl3-renderer { };
   sdl3-windows = lunarnix.x86_64-windows.callPackage ./examples/sdl3-renderer { };
-  sdl3-emscripten = import ./examples/sdl3-renderer {
-    stdenv = lunarnix.emscriptenStdenv;
-    sdl3 = lunarnix.emscriptenSdl3;
-    cmake = pkgs.cmake;
-    lib = pkgs.lib;
-  };
+  sdl3-emscripten = lunarnix.emscripten.callPackage ./examples/sdl3-renderer { };
 
   sdl3-linux-fhs = lunarnix.mkFhsPackage {
     drv = lunarnix.x86_64-linux.callPackage ./examples/sdl3-renderer { };
