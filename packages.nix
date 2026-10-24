@@ -11,4 +11,6 @@ in
     drv = sdl3App;
     name = "sdl3-renderer";
   };
+
+  emscripten-hello = lunarnix.emscripten.callPackage ./examples/emscripten-hello { };
 }

@@ -12,8 +12,8 @@
       packages = import ./packages.nix { inherit pkgs lunarnix; };
     in
     {
-      # The whole public API: wrap any Linux derivation as an FHS AppImage.
-      inherit (lunarnix) mkFhsPackage;
+      # The FHS helper plus the Emscripten cross environment.
+      inherit (lunarnix) mkFhsPackage emscripten;
       lib = lunarnix;
 
       packages.${system} = packages // {

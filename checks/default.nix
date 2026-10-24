@@ -24,4 +24,12 @@ in
     test -x "$app"
     file "$app" | grep -F 'ELF 64-bit'
   '';
+
+  emscripten-hello-artifacts = check "check-emscripten-hello" ''
+    root="${packages.emscripten-hello}/share/emscripten-hello"
+    test -f "$root/emscripten-hello.html"
+    test -f "$root/emscripten-hello.js"
+    test -f "$root/emscripten-hello.wasm"
+    file "$root/emscripten-hello.wasm" | grep -F 'WebAssembly'
+  '';
 }

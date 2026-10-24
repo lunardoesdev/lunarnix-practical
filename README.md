@@ -1,11 +1,12 @@
 # lunarnix-practical
 
-Portable Linux AppImage bundles built from ordinary Nix derivations, using
-**sharun** as the inner launcher and **uruntime** as the outer AppImage runtime.
+Portable Linux AppImage bundles built from ordinary Nix derivations, plus an
+Emscripten cross package set.
 
-`mkFhsPackage` produces exactly one executable: `$out/bin/<name>` (no
-`.AppImage` suffix). It runs on ordinary glibc distributions without Nix and
-uses the host GPU drivers.
+The FHS bundle uses **sharun** as the inner launcher and **uruntime** as the
+outer AppImage runtime. `mkFhsPackage` produces exactly one executable:
+`$out/bin/<name>` (no `.AppImage` suffix). It runs on ordinary glibc
+distributions without Nix and uses the host GPU drivers.
 
 ## Use it
 
@@ -64,6 +65,39 @@ At runtime sharun invokes the bundled loader with the bundled libraries, then
 falls back to host library paths for the GPU driver stack. The result is a
 single self-contained executable.
 
+## Emscripten
+
+`lunarnix.emscripten` is a full nixpkgs package set built with
+`crossSystem = { config = "wasm32-unknown-none"; }`. The cross stdenv is
+replaced through nixpkgs' `config.replaceCrossStdenv` hook, and the compiler is
+an ordinary cc-wrapper around `emcc`/`emar`/`emranlib`. That means standard Nix
+dependency handling works:
+
+```nix
+{ stdenv, zlib }:
+stdenv.mkDerivation {
+  pname = "my-app";
+  version = "1.0";
+  src = ./.;
+  buildInputs = [ zlib ];
+  buildPhase = ''
+    $CC main.c -lz -o my-app.html
+  '';
+}
+```
+
+Build it with:
+
+```nix
+lunarnix.emscripten.callPackage ./app { }
+```
+
+No manual `stdenv`, `zlib`, `lib`, `-I`, or `-L` passing is needed. The
+Emscripten setup hook exports `EMCC`, `EMSCRIPTEN_ROOT`, build/host/target
+triplets, `CMAKE_*`, a Meson cross file, Cargo target/linker variables,
+`PKG_CONFIG_ALLOW_CROSS`, and parallelism variables (`EMCC_CORES`,
+`MAKEFLAGS`, ...).
+
 ## Demos
 
 ```sh
@@ -72,10 +106,15 @@ nix build .#fhs-hello
 
 nix build .#sdl3-fhs
 ./result/bin/sdl3-renderer --renderer opengl --seconds 1
+
+nix build .#emscripten-hello
 ```
 
 The SDL3 demo is a normal native CMake package wrapped by `mkFhsPackage`; it
 uses stock nixpkgs SDL3 and requires a working host GL driver.
+
+`emscripten-hello` is a standard derivation with `buildInputs = [ zlib ]`; it
+produces `emscripten-hello.html`, `.js`, and `.wasm`.
 
 ## Checks
 
@@ -83,4 +122,5 @@ uses stock nixpkgs SDL3 and requires a working host GL driver.
 nix flake check
 ```
 
-The checks run the FHS hello AppImage and verify the SDL3 FHS artifact.
+The checks run the FHS hello AppImage, verify the SDL3 FHS artifact, and check
+the Emscripten `.html`/`.js`/`.wasm` output.
