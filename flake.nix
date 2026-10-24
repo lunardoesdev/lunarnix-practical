@@ -14,6 +14,7 @@
     {
       # The whole public API: wrap any Linux derivation as an FHS AppImage.
       inherit (lunarnix) mkFhsPackage;
+      inherit (lunarnix) emscripten;
       lib = lunarnix;
 
       packages.${system} = packages // {

@@ -64,6 +64,41 @@ At runtime sharun invokes the bundled loader with the bundled libraries, then
 falls back to host library paths for the GPU driver stack. The result is a
 single self-contained executable.
 
+## Emscripten target
+
+Emscripten is not a nixpkgs `crossSystem`, and `pkgs.emscriptenStdenv` is an
+autotools wrapper (`emconfigure`/`emmake`), not a normal compiler stdenv. This
+repo defines a proper Emscripten stdenv from parts, the same way a bare-metal
+cross stdenv is assembled:
+
+- a WASM target platform;
+- a `cc` package containing `emcc`, `em++`, `emar`, `emranlib` and a setup hook
+  exporting `CC`, `AR`, `RANLIB` and `CMAKE_TOOLCHAIN_FILE`;
+- `pkgs.stdenv.override { hostPlatform = ...; cc = ...; }`.
+
+The `sdl3` used is the real nixpkgs SDL3 package built with that stdenv. No
+SDL3 redefinition is kept in this repo.
+
+```nix
+let
+  emscripten = lunarnix.emscripten;
+in
+pkgs.callPackage ./examples/sdl3-renderer {
+  stdenv = emscripten.stdenv;
+  sdl3 = emscripten.sdl3;
+  buildPackages = pkgs;
+}
+```
+
+Build the demo:
+
+```sh
+nix build .#sdl3-emscripten
+```
+
+It produces `sdl3-renderer.html`, `.js`, and `.wasm` under
+`share/sdl3-renderer`; serve that directory over HTTP to run it in a browser.
+
 ## Demos
 
 ```sh
@@ -83,4 +118,5 @@ uses stock nixpkgs SDL3 and requires a working host GL driver.
 nix flake check
 ```
 
-The checks run the FHS hello AppImage and verify the SDL3 FHS artifact.
+The checks run the FHS hello AppImage, verify the SDL3 FHS artifact, and check
+the Emscripten `.wasm` output.
