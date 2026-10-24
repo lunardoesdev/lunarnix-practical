@@ -11,7 +11,7 @@ let
   '';
 
   sdl3Wasm = pkgs.stdenv.mkDerivation {
-    pname = "sdl3-emscripten";
+    pname = "sdl3";
     version = pkgs.sdl3.version;
     src = pkgs.sdl3.src;
 
@@ -58,8 +58,8 @@ let
       packageOverrides = _: {
         stdenv = pkgs.emscriptenStdenv;
         sdl3 = sdl3Wasm;
-        # Build tools must stay native; only the app's stdenv is Emscripten.
-        cmake = pkgs.cmake;
+        # Native build tools come from buildPackages, not the target set.
+        buildPackages = pkgs;
       };
     };
   };

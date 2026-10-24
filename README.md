@@ -38,12 +38,12 @@ source with explicit `crossSystem` values.
 [`examples/sdl3-renderer`](examples/sdl3-renderer) is a regular CMake package:
 
 ```nix
-{ stdenv, sdl3, cmake, lib }:
+{ stdenv, buildPackages, sdl3, lib }:
 stdenv.mkDerivation {
   pname = "sdl3-renderer";
   version = "1.0.0";
   src = ./.;
-  nativeBuildInputs = [ cmake ];
+  nativeBuildInputs = [ buildPackages.cmake ];
   buildInputs = [ sdl3 ];
   cmakeFlags = [ "-DSDL3_DIR=${lib.getDev sdl3}/lib/cmake/SDL3" ];
 }
@@ -62,12 +62,13 @@ use their stock nixpkgs SDL3 packages.
 
 ### Emscripten
 
-Nixpkgs has no `pkgsCross.emscripten` and no Emscripten SDL3 package. This repo
-builds the package set with `config.packageOverrides`, which is nixpkgs's
+Nixpkgs has no `pkgsCross.emscripten` and no stock Emscripten SDL3 package. This
+repo builds the package set with `config.packageOverrides`, which is nixpkgs's
 supported hook for replacing `stdenv` after bootstrapping. The set uses
-`pkgs.emscriptenStdenv` and a dedicated SDL3 built from nixpkgs' SDL3 source
-with Emscripten's CMake toolchain. The app uses the same `callPackage` call as
-every other target.
+`pkgs.emscriptenStdenv` and its `sdl3` is built from nixpkgs' SDL3 source with
+Emscripten's CMake toolchain. Native build tools such as `cmake` come from
+`buildPackages`, so they stay host binaries rather than being rebuilt with
+emcc. The app uses the same `callPackage` call as every other target.
 
 ## Android zlib demo
 

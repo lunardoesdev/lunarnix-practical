@@ -17,8 +17,9 @@ function and a TinyCC stdenv.
 Nixpkgs does not define an Emscripten cross system or provide an SDL3 Emscripten
 package. This repo creates an Emscripten package set using
 `config.packageOverrides` with `pkgs.emscriptenStdenv`, so `callPackage` resolves
-the Emscripten stdenv and SDL3 normally. Its SDL3 is built from nixpkgs' SDL3
-source with Emscripten's CMake toolchain.
+the Emscripten stdenv and its `sdl3` normally. That `sdl3` is built from
+nixpkgs' SDL3 source with Emscripten's CMake toolchain, and native build tools
+are taken from `buildPackages`.
 
 The Android package sets use explicit `crossSystem` settings because the
 nixpkgs prebuilt aliases use a different NDK version and do not cover all four
