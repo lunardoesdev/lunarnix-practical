@@ -58,6 +58,7 @@ let
       packageOverrides = _: {
         stdenv = pkgs.emscriptenStdenv;
         sdl3 = sdl3Wasm;
+        # Build tools must stay native; only the app's stdenv is Emscripten.
         cmake = pkgs.cmake;
       };
     };
