@@ -183,7 +183,25 @@ let
 
       replaceCrossStdenv = { baseStdenv, ... }:
         let
+          emscriptenPlatform = baseStdenv.hostPlatform // {
+            config = "wasm32-unknown-emscripten";
+            system = "wasm32-unknown-emscripten";
+            isEmscripten = true;
+            isWasm = true;
+            isNone = false;
+            parsed = baseStdenv.hostPlatform.parsed // {
+              kernel = {
+                name = "emscripten";
+                families = { };
+                execFormat = { name = "wasm"; };
+              };
+            };
+          };
+
           targetStdenv = baseStdenv.override (old: {
+            hostPlatform = emscriptenPlatform;
+            targetPlatform = emscriptenPlatform;
+
             inherit cc;
             hasCC = true;
             allowedRequisites = null;
@@ -215,11 +233,6 @@ let
 
       packageOverrides = _: {
         shared = false;
-
-        cmake = nativePkgs.cmake;
-        ninja = nativePkgs.ninja;
-        pkg-config = nativePkgs.pkg-config;
-        validatePkgConfig = nativePkgs.validatePkgConfig;
       };
     };
   };

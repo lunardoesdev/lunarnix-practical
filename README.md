@@ -67,11 +67,13 @@ single self-contained executable.
 
 ## Emscripten
 
-`lunarnix.emscripten` is a full nixpkgs package set built with
-`crossSystem = { config = "wasm32-unknown-none"; }`. The cross stdenv is
-replaced through nixpkgs' `config.replaceCrossStdenv` hook, and the compiler is
-an ordinary cc-wrapper around `emcc`/`emar`/`emranlib`. That means standard Nix
-dependency handling works:
+`lunarnix.emscripten` is a full nixpkgs package set with the effective target
+platform `wasm32-unknown-emscripten`. nixpkgs' `lib.systems` has no
+`emscripten` kernel, so the parseable cross-system base is
+`wasm32-unknown-none`; `config.replaceCrossStdenv` then relabels the stdenv's
+host and target platforms to `wasm32-unknown-emscripten` (`isEmscripten`,
+`isWasm`). The compiler is an ordinary cc-wrapper around
+`emcc`/`emar`/`emranlib`, so standard Nix dependency handling works:
 
 ```nix
 { stdenv, zlib }:

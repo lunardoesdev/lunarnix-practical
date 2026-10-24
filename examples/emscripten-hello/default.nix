@@ -27,6 +27,9 @@ stdenv.mkDerivation {
 
   meta = {
     mainProgram = "emscripten-hello.html";
-    platforms = lib.platforms.all ++ [ "wasm32-none" ];
+    platforms = lib.platforms.all ++ [
+      "wasm32-none"
+      "wasm32-unknown-emscripten"
+    ];
   };
 }

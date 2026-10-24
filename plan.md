@@ -24,15 +24,14 @@ AppImage:
 
 ## Emscripten target
 
-`lunarnix.emscripten` is a full nixpkgs package set built as a cross system:
+`lunarnix.emscripten` is a full nixpkgs package set with effective target
+platform `wasm32-unknown-emscripten`. nixpkgs' `lib.systems` does not know the
+`emscripten` kernel, so the parseable cross-system base is
+`wasm32-unknown-none`; `config.replaceCrossStdenv` relabels the stdenv's host
+and target platforms to `wasm32-unknown-emscripten`.
 
-```nix
-crossSystem = { config = "wasm32-unknown-none"; };
-```
-
-The cross stdenv is replaced through nixpkgs' `config.replaceCrossStdenv`
-hook. The compiler and binutils are ordinary nixpkgs cc/bintools wrappers
-around `emcc`/`emar`/`emranlib`, so the standard nixpkgs setup hooks work:
+The compiler and binutils are ordinary nixpkgs cc/bintools wrappers around
+`emcc`/`emar`/`emranlib`, so the standard nixpkgs setup hooks work:
 
 - `CC`, `CXX`, `AR`, `RANLIB`, `LD` and the other tools;
 - `-isystem` / `-L` flags generated from `buildInputs`;
