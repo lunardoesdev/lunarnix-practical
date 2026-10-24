@@ -6,7 +6,10 @@
   outputs = { self, nixpkgs }:
     let
       system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnsupportedSystem = true;
+      };
 
       lunarnix = import ./lib { inherit pkgs; };
       packages = import ./packages.nix { inherit pkgs lunarnix; };

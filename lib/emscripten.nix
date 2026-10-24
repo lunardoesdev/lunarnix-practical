@@ -3,13 +3,7 @@
 let
   inherit (pkgs) lib;
 
-  # Emscripten is not a nixpkgs cross system. Use the supported wasm32
-  # platform shape and give the stdenv an emcc-based cc.
-  wasmPlatform = lib.systems.elaborate {
-    config = "wasm32-unknown-none";
-  };
-
-  emccCc = pkgs.runCommand "emscripten-cc" { } ''
+  emccCc = (pkgs.runCommand "emscripten-cc" { } ''
     mkdir -p "$out/bin" "$out/nix-support"
 
     ln -s ${pkgs.emscripten}/bin/emcc "$out/bin/cc"
@@ -28,53 +22,78 @@ let
     export EM_CACHE="\''${TMPDIR:-/tmp}/emscripten-cache"
     export CMAKE_TOOLCHAIN_FILE="${pkgs.emscripten}/share/emscripten/cmake/Modules/Platform/Emscripten.cmake"
     EOF
-  '';
+  '').overrideAttrs (old: {
+    isGNU = false;
+    isClang = true;
+    isArocc = false;
+    isZig = false;
+    isFlang = false;
+  });
 
-  stdenv = pkgs.stdenv.override {
-    buildPlatform = pkgs.stdenv.buildPlatform;
-    hostPlatform = wasmPlatform;
-    targetPlatform = wasmPlatform;
+  emscriptenPkgs = import pkgs.path {
+    localSystem = pkgs.stdenv.hostPlatform.system;
 
-    cc = emccCc;
-    hasCC = true;
-
-    extraBuildInputs = [ ];
-    overrides = _: _: { };
-    allowedRequisites = null;
-  };
-
-  sdl3 = (pkgs.callPackage (pkgs.path + "/pkgs/by-name/sd/sdl3/package.nix") {
-    stdenv = stdenv;
-    x11Support = false;
-    vulkanSupport = false;
-    traySupport = false;
-  }).overrideAttrs (old: {
-    doCheck = false;
-    outputs = [ "out" "dev" "lib" ];
-    postInstall = "";
-
-    meta = (old.meta or { }) // {
-      platforms = lib.platforms.all ++ [ "wasm32-none" ];
+    crossSystem = {
+      config = "wasm32-unknown-none";
     };
 
-    cmakeFlags =
-      lib.filter
-        (flag:
-          !(lib.hasPrefix "-DSDL_TESTS=" flag)
-          && !(lib.hasPrefix "-DSDL_INSTALL_TESTS=" flag))
-        (old.cmakeFlags or [ ])
-      ++ [
-        "-DSDL_SHARED=OFF"
-        "-DSDL_STATIC=ON"
-        "-DSDL_TESTS=OFF"
-        "-DSDL_INSTALL_TESTS=OFF"
-        "-DSDL_EXAMPLES=OFF"
-        "-DSDL_UNIX_CONSOLE_BUILD=ON"
-        "-DSDL_OPENGL=ON"
-        "-DSDL_OPENGLES=ON"
-      ];
-  });
+    config = {
+      allowUnsupportedSystem = true;
+
+      replaceCrossStdenv = { baseStdenv, ... }:
+        let
+          targetStdenv = baseStdenv.override {
+            cc = emccCc;
+            hasCC = true;
+            allowedRequisites = null;
+          };
+        in
+        targetStdenv // {
+          mkDerivation = args:
+            let
+              patch = attrs: attrs // {
+                doCheck = false;
+                checkPhase = "true";
+                cmakeFlags =
+                  lib.filter
+                    (flag:
+                      !(lib.hasPrefix "-DSDL_TESTS=" flag)
+                      && !(lib.hasPrefix "-DSDL_INSTALL_TESTS=" flag))
+                    (attrs.cmakeFlags or [ ])
+                  ++ [
+                    "-DSDL_TESTS=OFF"
+                    "-DSDL_INSTALL_TESTS=OFF"
+                  ];
+                postInstall = (attrs.postInstall or "") + ''
+                  for output in $outputs; do
+                    eval "dir=\$$output"
+                    mkdir -p "$dir"
+                  done
+                '';
+              };
+            in
+            targetStdenv.mkDerivation (
+              if builtins.isFunction args then
+                finalAttrs: patch (args finalAttrs)
+              else
+                patch args
+            );
+        };
+
+      # Global option defaults consumed by callPackage. No package-specific
+      # SDL3 definition is needed here.
+      packageOverrides = _: {
+        x11Support = false;
+        vulkanSupport = false;
+        traySupport = false;
+
+        # Native build tools, not target packages.
+        cmake = pkgs.cmake;
+        ninja = pkgs.ninja;
+        pkg-config = pkgs.pkg-config;
+        validatePkgConfig = pkgs.validatePkgConfig;
+      };
+    };
+  };
 in
-{
-  inherit stdenv sdl3;
-}
+emscriptenPkgs

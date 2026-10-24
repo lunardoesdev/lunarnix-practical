@@ -66,29 +66,25 @@ single self-contained executable.
 
 ## Emscripten target
 
-Emscripten is not a nixpkgs `crossSystem`, and `pkgs.emscriptenStdenv` is an
-autotools wrapper (`emconfigure`/`emmake`), not a normal compiler stdenv. This
-repo defines a proper Emscripten stdenv from parts, the same way a bare-metal
-cross stdenv is assembled:
-
-- a WASM target platform;
-- a `cc` package containing `emcc`, `em++`, `emar`, `emranlib` and a setup hook
-  exporting `CC`, `AR`, `RANLIB` and `CMAKE_TOOLCHAIN_FILE`;
-- `pkgs.stdenv.override { hostPlatform = ...; cc = ...; }`.
-
-The `sdl3` used is the real nixpkgs SDL3 package built with that stdenv. No
-SDL3 redefinition is kept in this repo.
+Emscripten is set up as a real nixpkgs `crossSystem`:
 
 ```nix
-let
-  emscripten = lunarnix.emscripten;
-in
-pkgs.callPackage ./examples/sdl3-renderer {
-  stdenv = emscripten.stdenv;
-  sdl3 = emscripten.sdl3;
-  buildPackages = pkgs;
-}
+crossSystem = { config = "wasm32-unknown-none"; };
 ```
+
+The base cross stdenv is replaced through the official
+`config.replaceCrossStdenv` hook with one whose `cc` is an `emcc`-based package
+(`emcc`, `em++`, `emar`, `emranlib` and a setup hook exporting `CC`, `AR`,
+`RANLIB`, `CMAKE_TOOLCHAIN_FILE`). Native build tools stay in `buildPackages`.
+
+`sdl3` appears nowhere in the library: the demo application simply declares
+
+```nix
+buildInputs = [ sdl3 ];
+```
+
+and the cross package set's own `callPackage` resolves the unmodified nixpkgs
+SDL3 built with the Emscripten stdenv.
 
 Build the demo:
 

@@ -4,11 +4,7 @@ let
   sdl3App = pkgs.callPackage ./examples/sdl3-renderer { };
   fhsHello = import ./examples/fhs-hello { inherit pkgs lunarnix; };
 
-  sdl3Emscripten = pkgs.callPackage ./examples/sdl3-renderer {
-    stdenv = lunarnix.emscripten.stdenv;
-    sdl3 = lunarnix.emscripten.sdl3;
-    buildPackages = pkgs;
-  };
+  sdl3Emscripten = lunarnix.emscripten.callPackage ./examples/sdl3-renderer { };
 in
 {
   fhs-hello = fhsHello;
