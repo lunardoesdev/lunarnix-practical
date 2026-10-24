@@ -1,8 +1,6 @@
 { pkgs, packages }:
 
 let
-  inherit (pkgs) lib;
-
   tools = [
     pkgs.binutils
     pkgs.file
@@ -13,52 +11,17 @@ let
     ${script}
     mkdir -p "$out"
   '';
-
-  androidCheck = name: expected:
-    check "check-android-zlib-${name}" ''
-      binary="${packages."android-zlib-${name}"}/bin/zlib-probe"
-      file "$binary" | grep -F '${expected}'
-      file "$binary" | grep -F 'for Android 35'
-      readelf -h "$binary" | grep -F 'DYN'
-    '';
 in
 {
-  sdl3-windows-artifacts = check "check-sdl3-windows" ''
-    file "${packages.sdl3-windows}/bin/sdl3-renderer.exe" | grep -F 'PE32+'
-    file "${packages.sdl3-windows}/bin/SDL3.dll" | grep -F 'PE32+'
-    test ! -L "${packages.sdl3-windows}/bin/SDL3.dll"
-  '';
-
-  sdl3-linux-fhs-artifacts = check "check-sdl3-linux-fhs" ''
-    appimage="${packages.sdl3-linux-fhs}/bin/sdl3-renderer"
-    test -x "$appimage"
-    file "$appimage" | grep -F 'ELF 64-bit'
-  '';
-
-  sdl3-emscripten-artifacts = check "check-sdl3-emscripten" ''
-    root="${packages.sdl3-emscripten}/share/sdl3-renderer"
-    test -f "$root/sdl3-renderer.html"
-    test -f "$root/sdl3-renderer.js"
-    test -f "$root/sdl3-renderer.wasm"
-    file "$root/sdl3-renderer.wasm" | grep -F 'WebAssembly'
-    grep -q 'createSDL3' "$root/sdl3-renderer.js" || grep -q 'SDL3' "$root/sdl3-renderer.js"
-  '';
-
-  android-zlib-armv7a-artifacts = androidCheck "armv7a" "ARM,";
-  android-zlib-aarch64-artifacts = androidCheck "aarch64" "ARM aarch64";
-  android-zlib-i686-artifacts = androidCheck "i686" "Intel i386";
-  android-zlib-x86_64-artifacts = androidCheck "x86_64" "x86-64";
-
-  tcc-deps-run = check "check-tcc-deps" ''
-    output="$(${packages.tcc-deps}/bin/tcc-deps)"
-    echo "$output"
-    echo "$output" | grep -F 'zlib='
-    echo "$output" | grep -F 'libpng='
-  '';
-
   fhs-hello-run = check "check-fhs-hello" ''
     output="$(${packages.fhs-hello}/bin/fhs-hello)"
     echo "$output"
     echo "$output" | grep -F 'hello from a portable FHS bundle'
+  '';
+
+  sdl3-fhs-artifacts = check "check-sdl3-fhs" ''
+    app="${packages.sdl3-fhs}/bin/sdl3-renderer"
+    test -x "$app"
+    file "$app" | grep -F 'ELF 64-bit'
   '';
 }

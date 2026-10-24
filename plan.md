@@ -1,58 +1,56 @@
 # lunarnix-practical
 
-Practical Nix package sets for cross-compiling C examples, plus an FHS bundle
-function and a TinyCC stdenv.
+A small repository focused on one thing: turning an ordinary Linux Nix
+derivation into a portable FHS AppImage.
 
-## Target matrix
+## Scope
 
-| Target | Public interface | Demo |
-| --- | --- | --- |
-| `x86_64-linux` | Native nixpkgs package set | SDL3 renderer |
-| `x86_64-windows` | `pkgsCross.mingwW64` | SDL3 renderer |
-| `emscripten` | full package set with `emscriptenStdenv` via `packageOverrides` | SDL3 renderer |
-| Android armv7a/aarch64/i686/x86_64 | NDK 29 / API 35 package sets | zlib probe |
-| FHS Linux | `mkFhsPackage` wraps ordinary derivations | SDL3 renderer and hello demo |
-| Linux/TinyCC | custom TinyCC stdenv | zlib + libpng probe |
+- `mkFhsPackage` wraps any native Linux derivation.
+- Output is one executable: `$out/bin/<name>`.
+- Inner launcher: pinned **sharun**.
+- Outer AppImage runtime: pinned **uruntime** (`URUNTIME_EXTRACT=2`).
+- Host graphics stack (GL/EGL/Vulkan/DRM/Mesa) is not bundled by default.
 
-Nixpkgs does not define an Emscripten cross system or provide an SDL3 Emscripten
-package. This repo creates an Emscripten package set using
-`config.packageOverrides` with `pkgs.emscriptenStdenv`, so `callPackage` resolves
-the Emscripten stdenv and its `sdl3` normally. That `sdl3` is built from
-nixpkgs' SDL3 source with Emscripten's CMake toolchain, and native build tools
-are taken from `buildPackages`.
+No cross-compilation targets, no Windows/Android/Emscripten/TCC code.
 
-The Android package sets use explicit `crossSystem` settings because the
-nixpkgs prebuilt aliases use a different NDK version and do not cover all four
-ABIs. Android deliberately uses zlib rather than SDL3.
+## Layout
 
-## Dependency policy
+```text
+flake.nix
+default.nix
+lib/
+  default.nix
+  fhs.nix
+examples/
+  fhs-hello/
+  sdl3-renderer/
+checks/
+  default.nix
+```
 
-- App sources use ordinary CMake projects and regular Nix package inputs.
-- SDL3 is stock nixpkgs SDL3 for Linux and Windows.
-- Emscripten SDL3 is built from nixpkgs source because there is no stock wasm
-  SDL3 package.
-- Android examples consume stock target `zlib`.
-- No hardcoded store paths in C source or shell build commands.
+## FHS packaging details
 
-## FHS packaging
+`lib/fhs.nix`:
 
-`mkFhsPackage` accepts an ordinary derivation and outputs one executable at
-`$out/bin/<name>` (no `.AppImage` extension). `hostGraphics` defaults to true,
-so GL/Vulkan/DRM/Mesa remain host-provided. The build stages a sharun FHS AppDir,
-then combines its SquashFS image with pinned uruntime. Sharun launches the real
-binary inside the image; uruntime is the outer self-extracting AppImage runtime
-with extraction fallback when FUSE is unavailable.
+1. Stages an AppDir with the real executable under `shared/bin`.
+2. Installs sharun as `sharun`, `AppRun`, and the public `bin` entry.
+3. Copies glibc and the executable's `DT_NEEDED` closure, excluding host
+   graphics libraries when `hostGraphics = true`.
+4. Removes RPATH/RUNPATH from bundled ELF files.
+5. Packs the AppDir with `mksquashfs`.
+6. Prepends uruntime and writes `$out/bin/<name>`.
+
+The result is a single self-extracting AppImage that does not require Nix.
 
 ## Verification
 
-- Build and inspect Windows PE, Android ELF, and Emscripten WASM outputs.
-- `nix flake check` covers all artifact checks and runnable native probes.
-- Run the FHS SDL3 app on Wayland and Xwayland, confirming renderer and frames.
-- Run the TCC zlib/libpng probe and the FHS hello demo.
+- `nix flake check` runs the FHS hello AppImage.
+- The SDL3 FHS artifact is checked as a single ELF executable.
+- Manual run: `nix build .#sdl3-fhs` then run under Wayland/X11 with OpenGL.
 
 ## Version control
 
-Use Jujutsu for logical commits:
+Use Jujutsu:
 
 ```sh
 jj commit -m "message"

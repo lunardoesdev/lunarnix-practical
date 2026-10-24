@@ -1,11 +1,15 @@
 # lunarnix-practical
 
-Target nixpkgs package sets for Windows, Android, plus native Linux; an FHS
-bundle function; and examples built with SDL3, zlib, Emscripten, and TinyCC.
+Portable Linux AppImage bundles built from ordinary Nix derivations, using
+**sharun** as the inner launcher and **uruntime** as the outer AppImage runtime.
 
-## Import and use a target package set
+`mkFhsPackage` produces exactly one executable: `$out/bin/<name>` (no
+`.AppImage` suffix). It runs on ordinary glibc distributions without Nix and
+uses the host GPU drivers.
 
-Add lunarnix as a flake input:
+## Use it
+
+Add the flake input:
 
 ```nix
 {
@@ -17,107 +21,66 @@ Add lunarnix as a flake input:
   outputs = { self, nixpkgs, lunarnix }:
     let
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
+
+      myApp = pkgs.stdenv.mkDerivation {
+        pname = "my-app";
+        version = "1.0";
+        src = ./src;
+        # ... normal Nix build ...
+        meta.mainProgram = "my-app";
+      };
     in {
       packages.x86_64-linux.my-app =
-        lunarnix.x86_64-windows.callPackage ./my-app { };
+        lunarnix.mkFhsPackage {
+          drv = myApp;
+          name = "my-app";
+        };
     };
 }
 ```
 
-`lunarnix.x86_64-linux`, `lunarnix.x86_64-windows`, and
-`lunarnix.android-{armv7a,aarch64,i686,x86_64}` are nixpkgs package sets. Use
-their ordinary `callPackage` and dependencies; for example, a target package
-can take `{ stdenv, zlib, cmake }` and list `zlib` in `buildInputs`.
+Build:
 
-The Android package sets use NDK 29 / API 35. Nixpkgs does not provide all four
-Android ABI aliases, so the missing sets are imported from the pinned nixpkgs
-source with explicit `crossSystem` values.
-
-## SDL3 demo
-
-[`examples/sdl3-renderer`](examples/sdl3-renderer) is a regular CMake package:
-
-```nix
-{ stdenv, buildPackages, sdl3, lib }:
-stdenv.mkDerivation {
-  pname = "sdl3-renderer";
-  version = "1.0.0";
-  src = ./.;
-  nativeBuildInputs = [ buildPackages.cmake ];
-  buildInputs = [ sdl3 ];
-  cmakeFlags = [ "-DSDL3_DIR=${lib.getDev sdl3}/lib/cmake/SDL3" ];
-}
+```sh
+nix build .#my-app
+./result/bin/my-app
 ```
 
-Build it unchanged with each target package set's normal `callPackage`:
+`hostGraphics` defaults to `true`: GL/EGL/Vulkan/DRM/Mesa stay on the host.
+Pass `hostGraphics = false` only if you intentionally want to bundle them.
 
-```nix
-lunarnix.x86_64-linux.callPackage ./examples/sdl3-renderer { }
-lunarnix.x86_64-windows.callPackage ./examples/sdl3-renderer { }
-lunarnix.emscripten.callPackage ./examples/sdl3-renderer { }
-```
+## How the bundle is made
 
-CMake handles the executable and runtime-library install. Linux and Windows
-use their stock nixpkgs SDL3 packages.
+1. The derivation is copied to an AppDir at `shared/bin/<mainProgram>`.
+2. `sharun` is installed as the AppDir's `sharun`, `AppRun`, and `bin/<name>`.
+3. glibc and the executable's non-graphics `DT_NEEDED` closure are bundled.
+4. RPATH/RUNPATH is removed from bundled ELF files.
+5. The AppDir is packed with `mksquashfs`.
+6. Pinned `uruntime` is prepended to the SquashFS image, and
+   `URUNTIME_EXTRACT=2` makes it try FUSE and otherwise extract, so the
+   AppImage works without FUSE.
 
-### Emscripten
+At runtime sharun invokes the bundled loader with the bundled libraries, then
+falls back to host library paths for the GPU driver stack. The result is a
+single self-contained executable.
 
-Nixpkgs has no `pkgsCross.emscripten` and no stock Emscripten SDL3 package. This
-repo builds the package set with `config.packageOverrides`, which is nixpkgs's
-supported hook for replacing `stdenv` after bootstrapping. The set uses
-`pkgs.emscriptenStdenv` and its `sdl3` is built from nixpkgs' SDL3 source with
-Emscripten's CMake toolchain. Native build tools such as `cmake` come from
-`buildPackages`, so they stay host binaries rather than being rebuilt with
-emcc. The app uses the same `callPackage` call as every other target.
-
-## Android zlib demo
-
-Android uses a non-SDL CMake program in [`examples/zlib-probe`](examples/zlib-probe).
-It is built with each package set's stock `zlib`:
-
-```nix
-lunarnix.android-aarch64.callPackage ./examples/zlib-probe { }
-```
-
-## FHS bundle demo
-
-[`examples/fhs-hello`](examples/fhs-hello) first defines an ordinary native
-derivation, then passes it to the one `mkFhsPackage` function:
-
-```nix
-lunarnix.mkFhsPackage {
-  drv = myApp;
-  name = "my-app";
-  # hostGraphics defaults to true; GL/Vulkan/DRM/Mesa stay host-provided.
-}
-```
-
-The derivation output contains exactly one executable: `$out/bin/my-app`, a
-single-file AppImage with no extension. During the build, the FHS AppDir is
-staged and packed into SquashFS. Sharun is its inner launcher; pinned uruntime
-is prepended as the outer AppImage runtime. Its policy tries FUSE and falls
-back to extraction, so FUSE is not required.
-
-Build and run the demo:
+## Demos
 
 ```sh
 nix build .#fhs-hello
 ./result/bin/fhs-hello
+
+nix build .#sdl3-fhs
+./result/bin/sdl3-renderer --renderer opengl --seconds 1
 ```
 
-## TinyCC
+The SDL3 demo is a normal native CMake package wrapped by `mkFhsPackage`; it
+uses stock nixpkgs SDL3 and requires a working host GL driver.
 
-`tccStdenv` is a native custom stdenv for C-only packages. The `tcc-deps`
-example uses regular native zlib and libpng inputs.
-
-## Build and verify
+## Checks
 
 ```sh
-nix build .#sdl3-linux-native
-nix build .#sdl3-linux-fhs
-nix build .#sdl3-windows
-nix build .#sdl3-emscripten
-nix build .#android-zlib-aarch64
-nix build .#tcc-deps
 nix flake check
 ```
+
+The checks run the FHS hello AppImage and verify the SDL3 FHS artifact.
